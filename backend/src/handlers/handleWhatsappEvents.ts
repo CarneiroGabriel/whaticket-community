@@ -19,6 +19,7 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 
+import { checkBusinessHours, getSettingValue } from "../helpers/checkBusinessHours";
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 
@@ -292,6 +293,36 @@ export const handleMessage = async (
     await CreateMessageService({ messageData });
 
     await processVcardMessage(processedMessage);
+
+    if (!processedMessage.fromMe && !contextPayload.groupContact) {
+      const { isOpen, absenceMessage } = await checkBusinessHours();
+
+      if (!isOpen && absenceMessage) {
+        const sendOnlyAfterBot =
+          (await getSettingValue("businessHoursSendOnlyAfterBot")) === "true";
+
+        // se "sendOnlyAfterBot" está ativo, espera o ticket ter uma fila antes de avisar
+        const botFlowDone = !!ticket.queue || whatsapp.queues.length === 0;
+        const shouldSendNow = !sendOnlyAfterBot || botFlowDone;
+
+        if (shouldSendNow && !ticket.outOfHoursMsgSent) {
+          try {
+            await whatsappProvider.sendMessage(
+              contextPayload.whatsappId,
+              `${contactPayload.number}@c.us`,
+              formatBody(absenceMessage, contact)
+            );
+          } catch (error) {
+            logger.error("Error sending out-of-hours message:", error);
+          }
+          await ticket.update({ outOfHoursMsgSent: true });
+
+          if (!sendOnlyAfterBot) {
+            return;
+          }
+        }
+      }
+    }
 
     if (
       !ticket.queue &&

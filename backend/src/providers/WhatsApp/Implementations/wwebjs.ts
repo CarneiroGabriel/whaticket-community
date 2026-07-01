@@ -450,11 +450,10 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     const args: string = process.env.CHROME_ARGS || "";
 
-    const wbot: Session = new Client({
+    const clientOptions = {
       session: sessionCfg,
       authStrategy: new LocalAuth({ clientId: `bd_${whatsapp.id}` }),
       puppeteer: {
-        // headless: false, // TODO make sure chromium closes on session disconnection / delete
         executablePath: process.env.CHROME_BIN || undefined,
         browserWSEndpoint: process.env.CHROME_WS || undefined,
         args: [
@@ -468,7 +467,9 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           ...args.split(" ")
         ]
       }
-    });
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wbot: Session = new Client(clientOptions as any);
 
     wbot.on("qr", async qr => {
       logger.info("Session:", sessionName);

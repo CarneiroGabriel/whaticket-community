@@ -1,6 +1,7 @@
 import {
   Table,
   Column,
+  DataType,
   CreatedAt,
   UpdatedAt,
   Model,
@@ -37,6 +38,13 @@ class Ticket extends Model<Ticket> {
   @Default(false)
   @Column
   isGroup: boolean;
+
+  @Default(false)
+  @Column
+  outOfHoursMsgSent: boolean;
+
+  @Column(DataType.DATE)
+  inactivityWarningSentAt: Date | null;
 
   @CreatedAt
   createdAt: Date;
