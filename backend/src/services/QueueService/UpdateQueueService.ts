@@ -3,11 +3,16 @@ import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
 import ShowQueueService from "./ShowQueueService";
+import SyncQueueOptionsService, {
+  QueueOptionInput
+} from "./SyncQueueOptionsService";
 
 interface QueueData {
   name?: string;
   color?: string;
   greetingMessage?: string;
+  userIds?: number[];
+  options?: QueueOptionInput[];
 }
 
 const UpdateQueueService = async (
@@ -63,9 +68,16 @@ const UpdateQueueService = async (
     throw new AppError(err.message);
   }
 
+  const { userIds, options, ...queueAttributes } = queueData;
+
   const queue = await ShowQueueService(queueId);
 
-  await queue.update(queueData);
+  await queue.update(queueAttributes);
+
+  await queue.$set("users", userIds ?? []);
+  await SyncQueueOptionsService(queue.id, options ?? []);
+
+  await queue.reload();
 
   return queue;
 };

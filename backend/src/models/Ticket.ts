@@ -16,6 +16,7 @@ import {
 import Contact from "./Contact";
 import Message from "./Message";
 import Queue from "./Queue";
+import QueueOption from "./QueueOption";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
 
@@ -85,6 +86,17 @@ class Ticket extends Model<Ticket> {
 
   @BelongsTo(() => Queue)
   queue: Queue;
+
+  @ForeignKey(() => QueueOption)
+  @Column(DataType.INTEGER)
+  currentQueueOptionId: number | null;
+
+  @BelongsTo(() => QueueOption)
+  currentQueueOption: QueueOption;
+
+  @Default(false)
+  @Column
+  queueOptionsResolved: boolean;
 
   @HasMany(() => Message)
   messages: Message[];

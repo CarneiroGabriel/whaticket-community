@@ -11,6 +11,8 @@ import formatBody from "../helpers/Mustache";
 import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
 import Message from "../models/Message";
+import QueueOption from "../models/QueueOption";
+import Whatsapp from "../models/Whatsapp";
 
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
@@ -145,12 +147,175 @@ const processVcardMessage = async (
   }
 };
 
+// \u2500\u2500\u2500 Etapas (\u00e1rvore de op\u00e7\u00f5es) dentro de uma fila \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// Uma fila sem nenhuma QueueOption nunca entra nesses caminhos (as buscas por
+// parentId:null retornam vazio), ent\u00e3o o comportamento pra filas simples
+// existentes continua id\u00eantico ao de antes desta feature.
+
+const sendQueueBotMessage = async (
+  whatsappId: number,
+  contactPayload: ContactPayload,
+  text: string
+): Promise<void> => {
+  const body = formatBody(`\u200e${text}`, contactPayload as any);
+
+  try {
+    await whatsappProvider.sendMessage(
+      whatsappId,
+      `${contactPayload.number}@c.us`,
+      body
+    );
+  } catch (error) {
+    logger.error("Error sending queue bot message:", error);
+  }
+};
+
+const sendQueueOptionsMenu = (
+  whatsappId: number,
+  contactPayload: ContactPayload,
+  ticketId: number,
+  options: QueueOption[]
+): void => {
+  let optionsText = "";
+  options.forEach((option, index) => {
+    optionsText += `*${index + 1}* - ${option.title}\n`;
+  });
+
+  const debouncedSendMessage = debounce(
+    async () => {
+      await sendQueueBotMessage(whatsappId, contactPayload, optionsText);
+    },
+    3000,
+    ticketId
+  );
+
+  debouncedSendMessage();
+};
+
+const sendQueueRootOptionsIfAny = async (
+  whatsappId: number,
+  contactPayload: ContactPayload,
+  ticketId: number,
+  queueId: number
+): Promise<void> => {
+  const rootOptions = await QueueOption.findAll({
+    where: { queueId, parentId: null },
+    order: [
+      ["sortOrder", "ASC"],
+      ["id", "ASC"]
+    ]
+  });
+
+  if (rootOptions.length > 0) {
+    sendQueueOptionsMenu(whatsappId, contactPayload, ticketId, rootOptions);
+  }
+};
+
+const QUEUE_OPTION_BACK_COMMANDS = ["0", "voltar"];
+
+const handleQueueOptionsLogic = async (
+  whatsappId: number,
+  messageBody: string,
+  ticket: Ticket,
+  contactPayload: ContactPayload
+): Promise<void> => {
+  const currentOption = ticket.currentQueueOptionId
+    ? await QueueOption.findByPk(ticket.currentQueueOptionId)
+    : null;
+
+  const parentId = currentOption ? currentOption.id : null;
+
+  const levelOptions = await QueueOption.findAll({
+    where: { queueId: ticket.queueId, parentId },
+    order: [
+      ["sortOrder", "ASC"],
+      ["id", "ASC"]
+    ]
+  });
+
+  if (levelOptions.length === 0) {
+    // Defensivo: n\u00e3o deveria acontecer (isBotFlowActive s\u00f3 chama isso quando h\u00e1
+    // op\u00e7\u00f5es pra navegar), mas se acontecer, libera o ticket em vez de travar.
+    await ticket.update({
+      currentQueueOptionId: null,
+      queueOptionsResolved: true
+    });
+    return;
+  }
+
+  const normalized = messageBody.trim().toLowerCase();
+
+  if (QUEUE_OPTION_BACK_COMMANDS.includes(normalized)) {
+    if (!currentOption) {
+      sendQueueOptionsMenu(whatsappId, contactPayload, ticket.id, levelOptions);
+      return;
+    }
+
+    const grandParentId = currentOption.parentId;
+    await ticket.update({ currentQueueOptionId: grandParentId });
+
+    const newLevelOptions = await QueueOption.findAll({
+      where: { queueId: ticket.queueId, parentId: grandParentId },
+      order: [
+        ["sortOrder", "ASC"],
+        ["id", "ASC"]
+      ]
+    });
+    sendQueueOptionsMenu(whatsappId, contactPayload, ticket.id, newLevelOptions);
+    return;
+  }
+
+  const chosen = levelOptions[+normalized - 1];
+
+  if (!chosen) {
+    // Escolha inv\u00e1lida: reenvia o menu do n\u00edvel atual (n\u00e3o trava, n\u00e3o avan\u00e7a errado).
+    sendQueueOptionsMenu(whatsappId, contactPayload, ticket.id, levelOptions);
+    return;
+  }
+
+  if (chosen.message) {
+    await sendQueueBotMessage(whatsappId, contactPayload, chosen.message);
+  }
+
+  const children = await QueueOption.findAll({
+    where: { queueId: ticket.queueId, parentId: chosen.id },
+    order: [
+      ["sortOrder", "ASC"],
+      ["id", "ASC"]
+    ]
+  });
+
+  if (children.length > 0) {
+    await ticket.update({ currentQueueOptionId: chosen.id });
+    sendQueueOptionsMenu(whatsappId, contactPayload, ticket.id, children);
+  } else {
+    // N\u00f3-folha: libera o ticket pro atendimento humano normal na fila.
+    // Ponto de extens\u00e3o: aqui \u00e9 onde um fluxo automatizado (ex: 2\u00aa via de
+    // boleto) poderia ser disparado no futuro, olhando pra chosen.title/
+    // chosen.id antes de liberar o ticket. Fora do escopo desta tarefa.
+    await ticket.update({
+      currentQueueOptionId: null,
+      queueOptionsResolved: true
+    });
+  }
+};
+
 const handleQueueLogic = async (
   whatsappId: number,
   messageBody: string,
   ticket: Ticket,
   contactPayload: ContactPayload
 ): Promise<void> => {
+  if (ticket.queue) {
+    await handleQueueOptionsLogic(
+      whatsappId,
+      messageBody,
+      ticket,
+      contactPayload
+    );
+    return;
+  }
+
   const { queues, greetingMessage } = await ShowWhatsAppService(whatsappId);
 
   if (queues.length === 1) {
@@ -158,6 +323,12 @@ const handleQueueLogic = async (
       ticketData: { queueId: queues[0].id },
       ticketId: ticket.id
     });
+    await sendQueueRootOptionsIfAny(
+      whatsappId,
+      contactPayload,
+      ticket.id,
+      queues[0].id
+    );
     return;
   }
 
@@ -184,6 +355,13 @@ const handleQueueLogic = async (
     } catch (error) {
       logger.error("Error sending queue greeting message:", error);
     }
+
+    await sendQueueRootOptionsIfAny(
+      whatsappId,
+      contactPayload,
+      ticket.id,
+      choosenQueue.id
+    );
   } else {
     let options = "";
     queues.forEach((queue, index) => {
@@ -213,6 +391,22 @@ const handleQueueLogic = async (
 
     debouncedSentMessage();
   }
+};
+
+const isBotFlowActive = async (
+  ticket: Ticket,
+  whatsapp: Whatsapp
+): Promise<boolean> => {
+  if (whatsapp.queues.length === 0) return false;
+  if (!ticket.queue) return true;
+  if (ticket.queueOptionsResolved) return false;
+  if (ticket.currentQueueOptionId) return true;
+
+  const rootOptionsCount = await QueueOption.count({
+    where: { queueId: ticket.queueId, parentId: null }
+  });
+
+  return rootOptionsCount > 0;
 };
 
 export const handleMessage = async (
@@ -301,8 +495,9 @@ export const handleMessage = async (
         const sendOnlyAfterBot =
           (await getSettingValue("businessHoursSendOnlyAfterBot")) === "true";
 
-        // se "sendOnlyAfterBot" está ativo, espera o ticket ter uma fila antes de avisar
-        const botFlowDone = !!ticket.queue || whatsapp.queues.length === 0;
+        // se "sendOnlyAfterBot" está ativo, espera o fluxo de bot (escolha de fila
+        // + navegação da árvore de etapas, se houver) terminar antes de avisar
+        const botFlowDone = !(await isBotFlowActive(ticket, whatsapp));
         const shouldSendNow = !sendOnlyAfterBot || botFlowDone;
 
         if (shouldSendNow && !ticket.outOfHoursMsgSent) {
@@ -325,11 +520,10 @@ export const handleMessage = async (
     }
 
     if (
-      !ticket.queue &&
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&
       !ticket.userId &&
-      whatsapp.queues.length >= 1
+      (await isBotFlowActive(ticket, whatsapp))
     ) {
       await handleQueueLogic(
         contextPayload.whatsappId,

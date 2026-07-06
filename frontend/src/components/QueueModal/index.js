@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
@@ -13,14 +13,45 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Tabs from "@material-ui/core/Tabs";
+import Tab from "@material-ui/core/Tab";
+import Box from "@material-ui/core/Box";
 
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ColorPicker from "../ColorPicker";
+import QueueOptionsTree from "../QueueOptionsTree";
+import UserSelect from "../UserSelect";
+import { Can } from "../Can";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import { IconButton, InputAdornment } from "@material-ui/core";
 import { Colorize } from "@material-ui/icons";
+
+const buildOptionsTree = flatOptions => {
+	const byId = {};
+	(flatOptions || []).forEach(opt => {
+		byId[opt.id] = { ...opt, children: [] };
+	});
+	const roots = [];
+	(flatOptions || []).forEach(opt => {
+		const node = byId[opt.id];
+		if (opt.parentId && byId[opt.parentId]) {
+			byId[opt.parentId].children.push(node);
+		} else {
+			roots.push(node);
+		}
+	});
+	return roots;
+};
+
+const stripLocalFields = nodes =>
+	(nodes || []).map(({ _localId, children, id, ...rest }) => ({
+		...rest,
+		...(id ? { id } : {}),
+		children: stripLocalFields(children),
+	}));
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -65,6 +96,7 @@ const QueueSchema = Yup.object().shape({
 
 const QueueModal = ({ open, onClose, queueId }) => {
 	const classes = useStyles();
+	const { user: loggedInUser } = useContext(AuthContext);
 
 	const initialState = {
 		name: "",
@@ -74,6 +106,9 @@ const QueueModal = ({ open, onClose, queueId }) => {
 
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
 	const [queue, setQueue] = useState(initialState);
+	const [activeTab, setActiveTab] = useState("general");
+	const [options, setOptions] = useState([]);
+	const [selectedUserIds, setSelectedUserIds] = useState([]);
 	const greetingRef = useRef();
 
 	useEffect(() => {
@@ -84,6 +119,8 @@ const QueueModal = ({ open, onClose, queueId }) => {
 				setQueue(prevState => {
 					return { ...prevState, ...data };
 				});
+				setOptions(buildOptionsTree(data.options));
+				setSelectedUserIds((data.users || []).map(u => u.id));
 			} catch (err) {
 				toastError(err);
 			}
@@ -95,6 +132,9 @@ const QueueModal = ({ open, onClose, queueId }) => {
 				color: "",
 				greetingMessage: "",
 			});
+			setOptions([]);
+			setSelectedUserIds([]);
+			setActiveTab("general");
 		};
 	}, [queueId, open]);
 
@@ -105,12 +145,18 @@ const QueueModal = ({ open, onClose, queueId }) => {
 
 	const handleSaveQueue = async values => {
 		try {
+			const payload = {
+				...values,
+				userIds: selectedUserIds,
+				options: stripLocalFields(options),
+			};
+
 			if (queueId) {
-				await api.put(`/queue/${queueId}`, values);
+				await api.put(`/queue/${queueId}`, payload);
 			} else {
-				await api.post("/queue", values);
+				await api.post("/queue", payload);
 			}
-			toast.success("Queue saved successfully");
+			toast.success(i18n.t("queueModal.success"));
 			handleClose();
 		} catch (err) {
 			toastError(err);
@@ -119,7 +165,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
 
 	return (
 		<div className={classes.root}>
-			<Dialog open={open} onClose={handleClose} scroll="paper">
+			<Dialog open={open} onClose={handleClose} scroll="paper" maxWidth="sm" fullWidth>
 				<DialogTitle>
 					{queueId
 						? `${i18n.t("queueModal.title.edit")}`
@@ -138,81 +184,115 @@ const QueueModal = ({ open, onClose, queueId }) => {
 				>
 					{({ touched, errors, isSubmitting, values }) => (
 						<Form>
+							<Tabs
+								value={activeTab}
+								onChange={(e, value) => setActiveTab(value)}
+								indicatorColor="primary"
+								textColor="primary"
+								variant="fullWidth"
+							>
+								<Tab value="general" label={i18n.t("queueModal.tabs.general")} />
+								<Tab value="steps" label={i18n.t("queueModal.tabs.steps")} />
+								<Can
+									role={loggedInUser.profile}
+									perform="queue-modal:editUsers"
+									yes={() => (
+										<Tab value="users" label={i18n.t("queueModal.tabs.users")} />
+									)}
+								/>
+							</Tabs>
 							<DialogContent dividers>
-								<Field
-									as={TextField}
-									label={i18n.t("queueModal.form.name")}
-									autoFocus
-									name="name"
-									error={touched.name && Boolean(errors.name)}
-									helperText={touched.name && errors.name}
-									variant="outlined"
-									margin="dense"
-									className={classes.textField}
-								/>
-								<Field
-									as={TextField}
-									label={i18n.t("queueModal.form.color")}
-									name="color"
-									id="color"
-									onFocus={() => {
-										setColorPickerModalOpen(true);
-										greetingRef.current.focus();
-									}}
-									error={touched.color && Boolean(errors.color)}
-									helperText={touched.color && errors.color}
-									InputProps={{
-										startAdornment: (
-											<InputAdornment position="start">
-												<div
-													style={{ backgroundColor: values.color }}
-													className={classes.colorAdorment}
-												></div>
-											</InputAdornment>
-										),
-										endAdornment: (
-											<IconButton
-												size="small"
-												color="default"
-												onClick={() => setColorPickerModalOpen(true)}
-											>
-												<Colorize />
-											</IconButton>
-										),
-									}}
-									variant="outlined"
-									margin="dense"
-								/>
-								<ColorPicker
-									open={colorPickerModalOpen}
-									handleClose={() => setColorPickerModalOpen(false)}
-									onChange={color => {
-										values.color = color;
-										setQueue(() => {
-											return { ...values, color };
-										});
-									}}
-								/>
-								<div>
+								<Box hidden={activeTab !== "general"}>
 									<Field
 										as={TextField}
-										label={i18n.t("queueModal.form.greetingMessage")}
-										type="greetingMessage"
-										multiline
-										inputRef={greetingRef}
-										rows={5}
-										fullWidth
-										name="greetingMessage"
-										error={
-											touched.greetingMessage && Boolean(errors.greetingMessage)
-										}
-										helperText={
-											touched.greetingMessage && errors.greetingMessage
-										}
+										label={i18n.t("queueModal.form.name")}
+										autoFocus
+										name="name"
+										error={touched.name && Boolean(errors.name)}
+										helperText={touched.name && errors.name}
+										variant="outlined"
+										margin="dense"
+										className={classes.textField}
+									/>
+									<Field
+										as={TextField}
+										label={i18n.t("queueModal.form.color")}
+										name="color"
+										id="color"
+										onFocus={() => {
+											setColorPickerModalOpen(true);
+											greetingRef.current.focus();
+										}}
+										error={touched.color && Boolean(errors.color)}
+										helperText={touched.color && errors.color}
+										InputProps={{
+											startAdornment: (
+												<InputAdornment position="start">
+													<div
+														style={{ backgroundColor: values.color }}
+														className={classes.colorAdorment}
+													></div>
+												</InputAdornment>
+											),
+											endAdornment: (
+												<IconButton
+													size="small"
+													color="default"
+													onClick={() => setColorPickerModalOpen(true)}
+												>
+													<Colorize />
+												</IconButton>
+											),
+										}}
 										variant="outlined"
 										margin="dense"
 									/>
-								</div>
+									<ColorPicker
+										open={colorPickerModalOpen}
+										handleClose={() => setColorPickerModalOpen(false)}
+										onChange={color => {
+											values.color = color;
+											setQueue(() => {
+												return { ...values, color };
+											});
+										}}
+									/>
+									<div>
+										<Field
+											as={TextField}
+											label={i18n.t("queueModal.form.greetingMessage")}
+											type="greetingMessage"
+											multiline
+											inputRef={greetingRef}
+											rows={5}
+											fullWidth
+											name="greetingMessage"
+											error={
+												touched.greetingMessage && Boolean(errors.greetingMessage)
+											}
+											helperText={
+												touched.greetingMessage && errors.greetingMessage
+											}
+											variant="outlined"
+											margin="dense"
+										/>
+									</div>
+								</Box>
+								<Box hidden={activeTab !== "steps"}>
+									<QueueOptionsTree value={options} onChange={setOptions} />
+								</Box>
+								<Can
+									role={loggedInUser.profile}
+									perform="queue-modal:editUsers"
+									yes={() => (
+										<Box hidden={activeTab !== "users"}>
+											<UserSelect
+												selectedUserIds={selectedUserIds}
+												onChange={setSelectedUserIds}
+											/>
+										</Box>
+									)}
+								/>
 							</DialogContent>
 							<DialogActions>
 								<Button

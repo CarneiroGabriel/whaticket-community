@@ -187,10 +187,23 @@ const messages = {
           add: "Adicionar fila",
           edit: "Editar fila",
         },
+        success: "Fila salva com sucesso.",
+        tabs: {
+          general: "Geral",
+          steps: "Etapas",
+          users: "Atendentes",
+        },
         form: {
           name: "Nome",
           color: "Cor",
           greetingMessage: "Mensagem de saudação",
+        },
+        steps: {
+          titleLabel: "Título da etapa",
+          messageLabel: "Mensagem da etapa",
+          addRoot: "+ Adicionar etapa",
+          addChild: "+ Adicionar sub-etapa",
+          remove: "Remover",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -346,6 +359,9 @@ const messages = {
       },
       queueSelect: {
         inputLabel: "Filas",
+      },
+      userSelect: {
+        inputLabel: "Atendentes",
       },
       quickAnswers: {
         title: "Respostas Rápidas",

@@ -1,15 +1,20 @@
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
+import SyncQueueOptionsService, {
+  QueueOptionInput
+} from "./SyncQueueOptionsService";
 
 interface QueueData {
   name: string;
   color: string;
   greetingMessage?: string;
+  userIds?: number[];
+  options?: QueueOptionInput[];
 }
 
 const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
-  const { color, name } = queueData;
+  const { color, name, userIds, options } = queueData;
 
   const queueSchema = Yup.object().shape({
     name: Yup.string()
@@ -59,7 +64,13 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
     throw new AppError(err.message);
   }
 
-  const queue = await Queue.create(queueData);
+  const { userIds: _userIds, options: _options, ...queueAttributes } = queueData;
+  const queue = await Queue.create(queueAttributes);
+
+  await queue.$set("users", userIds ?? []);
+  await SyncQueueOptionsService(queue.id, options ?? []);
+
+  await queue.reload();
 
   return queue;
 };
