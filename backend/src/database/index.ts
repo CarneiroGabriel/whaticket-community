@@ -13,6 +13,8 @@ import QuickAnswer from "../models/QuickAnswer";
 import WppKey from "../models/WppKey";
 import BusinessHour from "../models/BusinessHour";
 import ScheduledAbsence from "../models/ScheduledAbsence";
+import InternalChat from "../models/InternalChat";
+import InternalMessage from "../models/InternalMessage";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -34,7 +36,9 @@ const models = [
   QuickAnswer,
   WppKey,
   BusinessHour,
-  ScheduledAbsence
+  ScheduledAbsence,
+  InternalChat,
+  InternalMessage
 ];
 
 sequelize.addModels(models);

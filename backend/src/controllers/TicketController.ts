@@ -6,6 +6,7 @@ import DeleteTicketService from "../services/TicketServices/DeleteTicketService"
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
+import SnoozeTicketService from "../services/TicketServices/SnoozeTicketService";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
@@ -106,6 +107,18 @@ export const update = async (
       });
     }
   }
+
+  return res.status(200).json(ticket);
+};
+
+export const snooze = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+  const { snoozedUntil } = req.body;
+
+  const { ticket } = await SnoozeTicketService({ ticketId, snoozedUntil });
 
   return res.status(200).json(ticket);
 };

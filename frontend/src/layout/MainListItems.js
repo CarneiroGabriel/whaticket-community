@@ -15,10 +15,12 @@ import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
+import ForumOutlinedIcon from "@material-ui/icons/ForumOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
+import { InternalChatContext } from "../context/InternalChat/InternalChatContext";
 import { Can } from "../components/Can";
 
 function ListItemLink(props) {
@@ -46,6 +48,7 @@ const MainListItems = (props) => {
   const { drawerClose } = props;
   const { whatsApps } = useContext(WhatsAppsContext);
   const { user } = useContext(AuthContext);
+  const { unreadTotal } = useContext(InternalChatContext);
   const [connectionWarning, setConnectionWarning] = useState(false);
 
   useEffect(() => {
@@ -101,6 +104,15 @@ const MainListItems = (props) => {
         to="/quickAnswers"
         primary={i18n.t("mainDrawer.listItems.quickAnswers")}
         icon={<QuestionAnswerOutlinedIcon />}
+      />
+      <ListItemLink
+        to="/internalChat"
+        primary={i18n.t("mainDrawer.listItems.internalChat")}
+        icon={
+          <Badge badgeContent={unreadTotal} color="secondary">
+            <ForumOutlinedIcon />
+          </Badge>
+        }
       />
       <Can
         role={user.profile}

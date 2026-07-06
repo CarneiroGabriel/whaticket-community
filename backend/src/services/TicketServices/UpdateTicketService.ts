@@ -44,10 +44,13 @@ const UpdateTicketService = async ({
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
   }
 
+  const clearSnooze = oldStatus === "snoozed" && status && status !== "snoozed";
+
   await ticket.update({
     status,
     queueId,
-    userId
+    userId,
+    ...(clearSnooze ? { snoozedUntil: null, previousStatus: null } : {})
   });
 
   if (whatsappId) {

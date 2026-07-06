@@ -239,12 +239,24 @@ const messages = {
           open: { title: "Inbox" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
+          snoozed: { title: "Adiados" },
         },
         search: {
           placeholder: "Buscar tickets e mensagens",
         },
         buttons: {
           showAll: "Todos",
+        },
+      },
+      postponeTicketModal: {
+        title: "Adiar Ticket",
+        fieldLabel: "Adiar até",
+        buttons: {
+          ok: "Adiar",
+          cancel: "Cancelar",
+        },
+        toasts: {
+          success: "Ticket adiado com sucesso.",
         },
       },
       transferTicketModal: {
@@ -287,6 +299,7 @@ const messages = {
           tickets: "Tickets",
           contacts: "Contatos",
           quickAnswers: "Respostas Rápidas",
+          internalChat: "Chat Interno",
           queues: "Filas",
           administration: "Administração",
           users: "Usuários",
@@ -301,6 +314,18 @@ const messages = {
       },
       notifications: {
         noTickets: "Nenhuma notificação.",
+      },
+      internalChat: {
+        title: "Chat Interno",
+        noChatSelected: "Selecione uma conversa para começar",
+        chatsList: {
+          noChatsTitle: "Nenhuma conversa",
+          noChatsMessage: "Inicie uma conversa com outro usuário.",
+          searchPlaceholder: "Buscar usuário...",
+        },
+        messageInput: {
+          placeholder: "Digite uma mensagem...",
+        },
       },
       queues: {
         title: "Filas",
@@ -491,6 +516,7 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Deletar",
         transfer: "Transferir",
+        snooze: "Adiar",
         confirmationModal: {
           title: "Deletar o ticket do contato",
           message:
@@ -540,6 +566,11 @@ const messages = {
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
         ERR_NO_TICKET_FOUND: "Nenhum tíquete encontrado com este ID.",
+        ERR_SNOOZE_DATE_IN_PAST: "A data de retorno deve ser no futuro.",
+        ERR_CANNOT_SNOOZE_CLOSED_TICKET:
+          "Não é possível adiar um ticket já resolvido.",
+        ERR_INTERNAL_CHAT_SELF: "Não é possível iniciar uma conversa consigo mesmo.",
+        ERR_NO_INTERNAL_CHAT_FOUND: "Conversa interna não encontrada.",
         ERR_NO_USER_FOUND: "Nenhum usuário encontrado com este ID.",
         ERR_NO_WAPP_FOUND: "Nenhum WhatsApp encontrado com este ID.",
         ERR_CREATING_MESSAGE: "Erro ao criar mensagem no banco de dados.",

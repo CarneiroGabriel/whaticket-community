@@ -3,6 +3,16 @@ import { Op } from "sequelize";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "./ShowTicketService";
+import { getIO } from "../../libs/socket";
+
+const wakeIfSnoozed = async (ticket: Ticket): Promise<void> => {
+  if (ticket.status !== "snoozed") return;
+
+  getIO().to("snoozed").emit("ticket", {
+    action: "delete",
+    ticketId: ticket.id
+  });
+};
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -34,10 +44,13 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
+      const wasSnoozed = ticket.status === "snoozed";
+      await wakeIfSnoozed(ticket);
       await ticket.update({
         status: "pending",
         userId: null,
-        unreadMessages
+        unreadMessages,
+        ...(wasSnoozed ? { snoozedUntil: null, previousStatus: null } : {})
       });
     }
   }
@@ -55,10 +68,13 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
+      const wasSnoozed = ticket.status === "snoozed";
+      await wakeIfSnoozed(ticket);
       await ticket.update({
         status: "pending",
         userId: null,
-        unreadMessages
+        unreadMessages,
+        ...(wasSnoozed ? { snoozedUntil: null, previousStatus: null } : {})
       });
     }
   }

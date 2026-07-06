@@ -13,6 +13,7 @@ import quickAnswerRoutes from "./quickAnswerRoutes";
 import apiRoutes from "./apiRoutes";
 import businessHourRoutes from "./businessHourRoutes";
 import scheduledAbsenceRoutes from "./scheduledAbsenceRoutes";
+import internalChatRoutes from "./internalChatRoutes";
 
 const routes = Router();
 
@@ -28,6 +29,7 @@ routes.use(queueRoutes);
 routes.use(quickAnswerRoutes);
 routes.use(businessHourRoutes);
 routes.use(scheduledAbsenceRoutes);
+routes.use(internalChatRoutes);
 routes.use("/api/messages", apiRoutes);
 
 export default routes;

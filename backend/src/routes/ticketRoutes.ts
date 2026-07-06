@@ -11,6 +11,12 @@ ticketRoutes.get("/tickets/:ticketId", isAuth, TicketController.show);
 
 ticketRoutes.post("/tickets", isAuth, TicketController.store);
 
+ticketRoutes.post(
+  "/tickets/:ticketId/snooze",
+  isAuth,
+  TicketController.snooze
+);
+
 ticketRoutes.put("/tickets/:ticketId", isAuth, TicketController.update);
 
 ticketRoutes.delete("/tickets/:ticketId", isAuth, TicketController.remove);

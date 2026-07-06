@@ -8,6 +8,7 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import SnoozeIcon from "@material-ui/icons/Snooze";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
@@ -176,6 +177,12 @@ const TicketsManager = () => {
             label={i18n.t("tickets.tabs.search.title")}
             classes={{ root: classes.tab }}
           />
+          <Tab
+            value={"snoozed"}
+            icon={<SnoozeIcon />}
+            label={i18n.t("tickets.tabs.snoozed.title")}
+            classes={{ root: classes.tab }}
+          />
         </Tabs>
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
@@ -288,6 +295,13 @@ const TicketsManager = () => {
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
         <TicketsList
           searchParam={searchParam}
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+        />
+      </TabPanel>
+      <TabPanel value={tab} name="snoozed" className={classes.ticketsWrapper}>
+        <TicketsList
+          status="snoozed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
         />

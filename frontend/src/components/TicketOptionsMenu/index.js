@@ -7,6 +7,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import ConfirmationModal from "../ConfirmationModal";
 import TransferTicketModal from "../TransferTicketModal";
+import PostponeTicketModal from "../PostponeTicketModal";
 import toastError from "../../errors/toastError";
 import { Can } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -14,6 +15,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
+	const [postponeTicketModalOpen, setPostponeTicketModalOpen] = useState(false);
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 
@@ -47,6 +49,17 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		}
 	};
 
+	const handleOpenPostponeModal = e => {
+		setPostponeTicketModalOpen(true);
+		handleClose();
+	};
+
+	const handleClosePostponeTicketModal = () => {
+		if (isMounted.current) {
+			setPostponeTicketModalOpen(false);
+		}
+	};
+
 	return (
 		<>
 			<Menu
@@ -67,6 +80,9 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			>
 				<MenuItem onClick={handleOpenTransferModal}>
 					{i18n.t("ticketOptionsMenu.transfer")}
+				</MenuItem>
+				<MenuItem onClick={handleOpenPostponeModal}>
+					{i18n.t("ticketOptionsMenu.snooze")}
 				</MenuItem>
 				<Can
 					role={user.profile}
@@ -95,6 +111,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				onClose={handleCloseTransferTicketModal}
 				ticketid={ticket.id}
 				ticketWhatsappId={ticket.whatsappId}
+			/>
+			<PostponeTicketModal
+				modalOpen={postponeTicketModalOpen}
+				onClose={handleClosePostponeTicketModal}
+				ticketid={ticket.id}
 			/>
 		</>
 	);

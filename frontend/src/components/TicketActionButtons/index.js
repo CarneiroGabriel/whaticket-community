@@ -103,15 +103,26 @@ const TicketActionButtons = ({ ticket }) => {
 				</>
 			)}
 			{ticket.status === "pending" && (
-				<ButtonWithSpinner
-					loading={loading}
-					size="small"
-					variant="contained"
-					color="primary"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-				>
-					{i18n.t("messagesList.header.buttons.accept")}
-				</ButtonWithSpinner>
+				<>
+					<ButtonWithSpinner
+						loading={loading}
+						size="small"
+						variant="contained"
+						color="primary"
+						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+					>
+						{i18n.t("messagesList.header.buttons.accept")}
+					</ButtonWithSpinner>
+					<IconButton onClick={handleOpenTicketOptionsMenu}>
+						<MoreVert />
+					</IconButton>
+					<TicketOptionsMenu
+						ticket={ticket}
+						anchorEl={anchorEl}
+						menuOpen={ticketOptionsMenuOpen}
+						handleClose={handleCloseTicketOptionsMenu}
+					/>
+				</>
 			)}
 		</div>
 	);

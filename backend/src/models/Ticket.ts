@@ -46,6 +46,12 @@ class Ticket extends Model<Ticket> {
   @Column(DataType.DATE)
   inactivityWarningSentAt: Date | null;
 
+  @Column(DataType.DATE)
+  snoozedUntil: Date | null;
+
+  @Column(DataType.STRING)
+  previousStatus: string | null;
+
   @CreatedAt
   createdAt: Date;
 
