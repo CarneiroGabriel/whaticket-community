@@ -375,6 +375,16 @@ const messages = {
               disabled: "Deshabilitado",
             },
           },
+          timezone: {
+            name: "Zona horaria",
+            options: {
+              saoPaulo: "Brasilia (São Paulo)",
+              manaus: "Manaos",
+              rioBranco: "Rio Branco",
+              fortaleza: "Fortaleza",
+              noronha: "Fernando de Noronha",
+            },
+          },
         },
       },
       messagesList: {

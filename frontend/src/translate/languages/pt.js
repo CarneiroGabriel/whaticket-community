@@ -381,6 +381,16 @@ const messages = {
               disabled: "Desativado",
             },
           },
+          timezone: {
+            name: "Fuso horário",
+            options: {
+              saoPaulo: "Brasília (São Paulo)",
+              manaus: "Manaus",
+              rioBranco: "Rio Branco",
+              fortaleza: "Fortaleza",
+              noronha: "Fernando de Noronha",
+            },
+          },
         },
         businessHours: {
           enabled: "Horário de atendimento ativo",

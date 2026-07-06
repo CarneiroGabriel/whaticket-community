@@ -370,6 +370,16 @@ const messages = {
               disabled: "Disabled",
             },
           },
+          timezone: {
+            name: "Timezone",
+            options: {
+              saoPaulo: "Brasília (São Paulo)",
+              manaus: "Manaus",
+              rioBranco: "Rio Branco",
+              fortaleza: "Fortaleza",
+              noronha: "Fernando de Noronha",
+            },
+          },
         },
       },
       messagesList: {

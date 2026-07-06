@@ -93,6 +93,16 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
+// Lista curta com os fusos do Brasil; para adicionar outros, basta incluir
+// { value: "<IANA timezone>", labelKey: "settings.settings.timezone.options.<chave>" }.
+const TIMEZONE_OPTIONS = [
+  { value: "America/Sao_Paulo", labelKey: "settings.settings.timezone.options.saoPaulo" },
+  { value: "America/Manaus", labelKey: "settings.settings.timezone.options.manaus" },
+  { value: "America/Rio_Branco", labelKey: "settings.settings.timezone.options.rioBranco" },
+  { value: "America/Fortaleza", labelKey: "settings.settings.timezone.options.fortaleza" },
+  { value: "America/Noronha", labelKey: "settings.settings.timezone.options.noronha" },
+];
+
 const DAY_NAMES = [
   i18n.t("settings.businessHours.days.0"),
   i18n.t("settings.businessHours.days.1"),
@@ -145,6 +155,27 @@ function GeneralTab({ settings, onChangeSetting }) {
           <option value="disabled">
             {i18n.t("settings.settings.userCreation.options.disabled")}
           </option>
+        </Select>
+      </Paper>
+
+      <Paper className={classes.paper}>
+        <Typography variant="body1">
+          {i18n.t("settings.settings.timezone.name")}
+        </Typography>
+        <Select
+          margin="dense"
+          variant="outlined"
+          native
+          name="timezone"
+          value={settings.length > 0 ? getVal("timezone") : ""}
+          className={classes.settingOption}
+          onChange={onChangeSetting}
+        >
+          {TIMEZONE_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {i18n.t(option.labelKey)}
+            </option>
+          ))}
         </Select>
       </Paper>
 
@@ -389,7 +420,10 @@ function BusinessHoursTab({ settings, onChangeSetting }) {
               label={i18n.t("settings.businessHours.from")}
               type="time"
               value={newInterval.start}
-              onChange={e => setNewInterval(p => ({ ...p, start: e.target.value }))}
+              onChange={e => {
+                const value = e.target.value;
+                setNewInterval(p => ({ ...p, start: value }));
+              }}
               InputLabelProps={{ shrink: true }}
               style={{ marginRight: 8 }}
             />
@@ -397,7 +431,10 @@ function BusinessHoursTab({ settings, onChangeSetting }) {
               label={i18n.t("settings.businessHours.to")}
               type="time"
               value={newInterval.end}
-              onChange={e => setNewInterval(p => ({ ...p, end: e.target.value }))}
+              onChange={e => {
+                const value = e.target.value;
+                setNewInterval(p => ({ ...p, end: value }));
+              }}
               InputLabelProps={{ shrink: true }}
               style={{ marginRight: 8 }}
             />
