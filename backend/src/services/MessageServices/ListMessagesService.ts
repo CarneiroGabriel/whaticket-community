@@ -1,3 +1,4 @@
+import { WhereOptions } from "sequelize";
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
@@ -29,8 +30,17 @@ const ListMessagesService = async ({
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
+  // Em conversas individuais, mostra o histórico completo do contato (todos os
+  // tickets antigos incluídos), não só o ticket atual. Em grupos não faz sentido:
+  // Ticket.contactId é o contato do GRUPO, enquanto Message.contactId é o membro
+  // que enviou cada mensagem individualmente - filtrar por contactId aí não
+  // corresponderia a "histórico do grupo", então grupo continua por ticketId.
+  const where: WhereOptions = ticket.isGroup
+    ? { ticketId }
+    : { contactId: ticket.contactId };
+
   const { count, rows: messages } = await Message.findAndCountAll({
-    where: { ticketId },
+    where,
     limit,
     include: [
       "contact",

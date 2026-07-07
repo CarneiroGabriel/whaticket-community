@@ -437,7 +437,11 @@ export const handleMessage = async (
     const messageData: any = {
       id: processedMessage.id,
       ticketId: ticket.id,
-      contactId: processedMessage.fromMe ? undefined : contact.id,
+      // `contact` é sempre o contato/cliente da conversa (mesmo em mensagens
+      // fromMe, onde vem de wbot.getContactById(msg.to)) - precisa ser gravado
+      // sempre, senão o histórico "todas as mensagens desse contato" perde as
+      // mensagens enviadas pelo próprio atendente.
+      contactId: contact.id,
       body: processedMessage.body,
       fromMe: processedMessage.fromMe,
       read: processedMessage.fromMe,
