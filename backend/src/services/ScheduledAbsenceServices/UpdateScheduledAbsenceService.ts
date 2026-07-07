@@ -1,5 +1,7 @@
 import AppError from "../../errors/AppError";
 import ScheduledAbsence from "../../models/ScheduledAbsence";
+import { invalidateCache } from "../../libs/cache";
+import { scheduledAbsenceCacheKey } from "../../helpers/checkBusinessHours";
 
 interface Request {
   id: string | number;
@@ -21,6 +23,10 @@ const UpdateScheduledAbsenceService = async ({
   }
 
   await absence.update(data);
+
+  await invalidateCache(
+    scheduledAbsenceCacheKey(new Date().toISOString().slice(0, 10))
+  );
 
   return absence;
 };

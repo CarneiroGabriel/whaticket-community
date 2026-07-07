@@ -1,5 +1,7 @@
 import AppError from "../../errors/AppError";
 import ScheduledAbsence from "../../models/ScheduledAbsence";
+import { invalidateCache } from "../../libs/cache";
+import { scheduledAbsenceCacheKey } from "../../helpers/checkBusinessHours";
 
 const DeleteScheduledAbsenceService = async (
   id: string | number
@@ -11,6 +13,10 @@ const DeleteScheduledAbsenceService = async (
   }
 
   await absence.destroy();
+
+  await invalidateCache(
+    scheduledAbsenceCacheKey(new Date().toISOString().slice(0, 10))
+  );
 };
 
 export default DeleteScheduledAbsenceService;

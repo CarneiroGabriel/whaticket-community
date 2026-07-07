@@ -1,5 +1,7 @@
 import AppError from "../../errors/AppError";
 import BusinessHour, { TimeInterval } from "../../models/BusinessHour";
+import { invalidateCache } from "../../libs/cache";
+import { businessHourCacheKey } from "../../helpers/checkBusinessHours";
 
 interface Request {
   id: number;
@@ -19,6 +21,8 @@ const UpdateBusinessHourService = async ({
   }
 
   await businessHour.update({ enabled, intervals });
+
+  await invalidateCache(businessHourCacheKey(businessHour.dayOfWeek));
 
   return businessHour;
 };

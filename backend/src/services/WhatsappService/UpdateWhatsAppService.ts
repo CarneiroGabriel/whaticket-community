@@ -5,6 +5,8 @@ import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
 import ShowWhatsAppService from "./ShowWhatsAppService";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
+import { invalidateCache } from "../../libs/cache";
+import { whatsappQueuesCacheKey } from "./GetCachedWhatsAppQueues";
 
 interface WhatsappData {
   name?: string;
@@ -79,6 +81,8 @@ const UpdateWhatsAppService = async ({
   });
 
   await AssociateWhatsappQueue(whatsapp, queueIds);
+
+  await invalidateCache(whatsappQueuesCacheKey(whatsapp.id));
 
   return { whatsapp, oldDefaultWhatsapp };
 };

@@ -12,12 +12,14 @@ import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
 import Message from "../models/Message";
 import QueueOption from "../models/QueueOption";
-import Whatsapp from "../models/Whatsapp";
 
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
-import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
+import GetCachedWhatsAppQueues from "../services/WhatsappService/GetCachedWhatsAppQueues";
+import GetCachedQueueOptions, {
+  CachedQueueOption
+} from "../services/QueueService/GetCachedQueueOptions";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 
@@ -174,7 +176,7 @@ const sendQueueOptionsMenu = (
   whatsappId: number,
   contactPayload: ContactPayload,
   ticketId: number,
-  options: QueueOption[]
+  options: CachedQueueOption[]
 ): void => {
   let optionsText = "";
   options.forEach((option, index) => {
@@ -198,13 +200,7 @@ const sendQueueRootOptionsIfAny = async (
   ticketId: number,
   queueId: number
 ): Promise<void> => {
-  const rootOptions = await QueueOption.findAll({
-    where: { queueId, parentId: null },
-    order: [
-      ["sortOrder", "ASC"],
-      ["id", "ASC"]
-    ]
-  });
+  const rootOptions = await GetCachedQueueOptions(queueId, null);
 
   if (rootOptions.length > 0) {
     sendQueueOptionsMenu(whatsappId, contactPayload, ticketId, rootOptions);
@@ -225,13 +221,7 @@ const handleQueueOptionsLogic = async (
 
   const parentId = currentOption ? currentOption.id : null;
 
-  const levelOptions = await QueueOption.findAll({
-    where: { queueId: ticket.queueId, parentId },
-    order: [
-      ["sortOrder", "ASC"],
-      ["id", "ASC"]
-    ]
-  });
+  const levelOptions = await GetCachedQueueOptions(ticket.queueId, parentId);
 
   if (levelOptions.length === 0) {
     // Defensivo: n\u00e3o deveria acontecer (isBotFlowActive s\u00f3 chama isso quando h\u00e1
@@ -254,13 +244,10 @@ const handleQueueOptionsLogic = async (
     const grandParentId = currentOption.parentId;
     await ticket.update({ currentQueueOptionId: grandParentId });
 
-    const newLevelOptions = await QueueOption.findAll({
-      where: { queueId: ticket.queueId, parentId: grandParentId },
-      order: [
-        ["sortOrder", "ASC"],
-        ["id", "ASC"]
-      ]
-    });
+    const newLevelOptions = await GetCachedQueueOptions(
+      ticket.queueId,
+      grandParentId
+    );
     sendQueueOptionsMenu(whatsappId, contactPayload, ticket.id, newLevelOptions);
     return;
   }
@@ -277,13 +264,7 @@ const handleQueueOptionsLogic = async (
     await sendQueueBotMessage(whatsappId, contactPayload, chosen.message);
   }
 
-  const children = await QueueOption.findAll({
-    where: { queueId: ticket.queueId, parentId: chosen.id },
-    order: [
-      ["sortOrder", "ASC"],
-      ["id", "ASC"]
-    ]
-  });
+  const children = await GetCachedQueueOptions(ticket.queueId, chosen.id);
 
   if (children.length > 0) {
     await ticket.update({ currentQueueOptionId: chosen.id });
@@ -316,7 +297,9 @@ const handleQueueLogic = async (
     return;
   }
 
-  const { queues, greetingMessage } = await ShowWhatsAppService(whatsappId);
+  const { queues, greetingMessage } = await GetCachedWhatsAppQueues(
+    whatsappId
+  );
 
   if (queues.length === 1) {
     await UpdateTicketService({
@@ -395,18 +378,16 @@ const handleQueueLogic = async (
 
 const isBotFlowActive = async (
   ticket: Ticket,
-  whatsapp: Whatsapp
+  whatsappQueuesCount: number
 ): Promise<boolean> => {
-  if (whatsapp.queues.length === 0) return false;
+  if (whatsappQueuesCount === 0) return false;
   if (!ticket.queue) return true;
   if (ticket.queueOptionsResolved) return false;
   if (ticket.currentQueueOptionId) return true;
 
-  const rootOptionsCount = await QueueOption.count({
-    where: { queueId: ticket.queueId, parentId: null }
-  });
+  const rootOptions = await GetCachedQueueOptions(ticket.queueId, null);
 
-  return rootOptionsCount > 0;
+  return rootOptions.length > 0;
 };
 
 export const handleMessage = async (
@@ -437,7 +418,7 @@ export const handleMessage = async (
       });
     }
 
-    const whatsapp = await ShowWhatsAppService(contextPayload.whatsappId);
+    const whatsapp = await GetCachedWhatsAppQueues(contextPayload.whatsappId);
     if (
       contextPayload.unreadMessages === 0 &&
       whatsapp.farewellMessage &&
@@ -497,7 +478,10 @@ export const handleMessage = async (
 
         // se "sendOnlyAfterBot" está ativo, espera o fluxo de bot (escolha de fila
         // + navegação da árvore de etapas, se houver) terminar antes de avisar
-        const botFlowDone = !(await isBotFlowActive(ticket, whatsapp));
+        const botFlowDone = !(await isBotFlowActive(
+          ticket,
+          whatsapp.queues.length
+        ));
         const shouldSendNow = !sendOnlyAfterBot || botFlowDone;
 
         if (shouldSendNow && !ticket.outOfHoursMsgSent) {
@@ -523,7 +507,7 @@ export const handleMessage = async (
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&
       !ticket.userId &&
-      (await isBotFlowActive(ticket, whatsapp))
+      (await isBotFlowActive(ticket, whatsapp.queues.length))
     ) {
       await handleQueueLogic(
         contextPayload.whatsappId,

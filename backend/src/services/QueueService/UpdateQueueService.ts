@@ -6,6 +6,8 @@ import ShowQueueService from "./ShowQueueService";
 import SyncQueueOptionsService, {
   QueueOptionInput
 } from "./SyncQueueOptionsService";
+import { invalidateCacheByPattern } from "../../libs/cache";
+import { whatsappQueuesCachePattern } from "../WhatsappService/GetCachedWhatsAppQueues";
 
 interface QueueData {
   name?: string;
@@ -78,6 +80,11 @@ const UpdateQueueService = async (
   await SyncQueueOptionsService(queue.id, options ?? []);
 
   await queue.reload();
+
+  // name/color/greetingMessage entram no payload que GetCachedWhatsAppQueues
+  // guarda para cada conexão associada a esta fila - sem saber de antemão
+  // quais são, invalida a cache de filas de todos os whatsapps.
+  await invalidateCacheByPattern(whatsappQueuesCachePattern());
 
   return queue;
 };

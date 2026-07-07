@@ -1,4 +1,6 @@
 import ScheduledAbsence from "../../models/ScheduledAbsence";
+import { invalidateCache } from "../../libs/cache";
+import { scheduledAbsenceCacheKey } from "../../helpers/checkBusinessHours";
 
 interface Request {
   name: string;
@@ -22,6 +24,13 @@ const CreateScheduledAbsenceService = async ({
     message,
     enabled
   });
+
+  // Só o dia de hoje pode estar em cache neste momento (dias futuros ainda
+  // não foram consultados por checkBusinessHours, então não há nada a
+  // invalidar para eles - ver observação no relatório sobre esse limite).
+  await invalidateCache(
+    scheduledAbsenceCacheKey(new Date().toISOString().slice(0, 10))
+  );
 
   return absence;
 };

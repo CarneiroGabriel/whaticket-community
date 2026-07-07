@@ -1,5 +1,7 @@
 import { Op } from "sequelize";
 import QueueOption from "../../models/QueueOption";
+import { invalidateCacheByPattern } from "../../libs/cache";
+import { queueOptionsCachePattern } from "./GetCachedQueueOptions";
 
 export interface QueueOptionInput {
   id?: number;
@@ -58,6 +60,11 @@ const SyncQueueOptionsService = async (
       id: { [Op.notIn]: Array.from(keepIds) }
     }
   });
+
+  // A árvore inteira da fila pode ter mudado (níveis adicionados/removidos/
+  // reordenados), então invalida todos os níveis em cache de uma vez em vez
+  // de tentar calcular exatamente quais parentIds foram afetados.
+  await invalidateCacheByPattern(queueOptionsCachePattern(queueId));
 };
 
 export default SyncQueueOptionsService;

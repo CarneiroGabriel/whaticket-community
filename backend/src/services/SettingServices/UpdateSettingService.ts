@@ -1,5 +1,7 @@
 import AppError from "../../errors/AppError";
 import Setting from "../../models/Setting";
+import { invalidateCache } from "../../libs/cache";
+import { settingCacheKey } from "../../helpers/checkBusinessHours";
 
 interface Request {
   key: string;
@@ -19,6 +21,8 @@ const UpdateSettingService = async ({
   }
 
   await setting.update({ value });
+
+  await invalidateCache(settingCacheKey(key));
 
   return setting;
 };
