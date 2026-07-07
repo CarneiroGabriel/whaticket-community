@@ -24,7 +24,7 @@ import toastError from "../../errors/toastError";
 import ColorPicker from "../ColorPicker";
 import QueueOptionsTree from "../QueueOptionsTree";
 import UserSelect from "../UserSelect";
-import { Can } from "../Can";
+import { check } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { IconButton, InputAdornment } from "@material-ui/core";
 import { Colorize } from "@material-ui/icons";
@@ -97,6 +97,11 @@ const QueueSchema = Yup.object().shape({
 const QueueModal = ({ open, onClose, queueId }) => {
 	const classes = useStyles();
 	const { user: loggedInUser } = useContext(AuthContext);
+	// Precisa ser um <Tab> filho direto de <Tabs> (não um <Can> envolvendo um
+	// <Tab>) - o Tabs do Material-UI clona seus filhos por tipo pra injetar
+	// onChange/selected/indicator, e um wrapper custom quebra essa introspecção
+	// silenciosamente: o clique para de trocar de aba, sem erro nenhum.
+	const canEditQueueUsers = check(loggedInUser.profile, "queue-modal:editUsers");
 
 	const initialState = {
 		name: "",
@@ -193,13 +198,9 @@ const QueueModal = ({ open, onClose, queueId }) => {
 							>
 								<Tab value="general" label={i18n.t("queueModal.tabs.general")} />
 								<Tab value="steps" label={i18n.t("queueModal.tabs.steps")} />
-								<Can
-									role={loggedInUser.profile}
-									perform="queue-modal:editUsers"
-									yes={() => (
-										<Tab value="users" label={i18n.t("queueModal.tabs.users")} />
-									)}
-								/>
+								{canEditQueueUsers && (
+									<Tab value="users" label={i18n.t("queueModal.tabs.users")} />
+								)}
 							</Tabs>
 							<DialogContent dividers>
 								<Box hidden={activeTab !== "general"}>
@@ -281,18 +282,14 @@ const QueueModal = ({ open, onClose, queueId }) => {
 								<Box hidden={activeTab !== "steps"}>
 									<QueueOptionsTree value={options} onChange={setOptions} />
 								</Box>
-								<Can
-									role={loggedInUser.profile}
-									perform="queue-modal:editUsers"
-									yes={() => (
-										<Box hidden={activeTab !== "users"}>
-											<UserSelect
-												selectedUserIds={selectedUserIds}
-												onChange={setSelectedUserIds}
-											/>
-										</Box>
-									)}
-								/>
+								{canEditQueueUsers && (
+									<Box hidden={activeTab !== "users"}>
+										<UserSelect
+											selectedUserIds={selectedUserIds}
+											onChange={setSelectedUserIds}
+										/>
+									</Box>
+								)}
 							</DialogContent>
 							<DialogActions>
 								<Button
