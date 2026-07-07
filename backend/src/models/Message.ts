@@ -36,12 +36,21 @@ class Message extends Model<Message> {
 
   @Column(DataType.STRING)
   get mediaUrl(): string | null {
-    if (this.getDataValue("mediaUrl")) {
-      return `${process.env.BACKEND_URL}:${
-        process.env.PROXY_PORT
-      }/public/${this.getDataValue("mediaUrl")}`;
-    }
-    return null;
+    const filename = this.getDataValue("mediaUrl");
+    if (!filename) return null;
+
+    const backendUrl = process.env.BACKEND_URL || "";
+    // BACKEND_URL já vem com a porta em algumas configs (ex: .env.example =
+    // "http://localhost:8080"), então só acrescenta PROXY_PORT quando
+    // BACKEND_URL ainda não termina em ":<porta>" - senão gera
+    // "http://host:8080:8080/..." (URL inválida, rejeitada pelo parser do
+    // navegador, e a mídia nunca chega a ser requisitada).
+    const alreadyHasPort = /:\d+$/.test(backendUrl);
+    const base = alreadyHasPort
+      ? backendUrl
+      : `${backendUrl}:${process.env.PROXY_PORT}`;
+
+    return `${base}/public/${filename}`;
   }
 
   @Column

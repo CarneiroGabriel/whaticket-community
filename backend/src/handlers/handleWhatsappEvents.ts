@@ -450,8 +450,11 @@ export const handleMessage = async (
       const filename = await saveMediaFile(mediaPayload);
       messageData.mediaUrl = filename;
       messageData.body = processedMessage.body || filename;
-      const [mediaType] = mediaPayload.mimetype.split("/");
-      messageData.mediaType = mediaType;
+      // mediaType já foi setado acima a partir de processedMessage.type (ex:
+      // "ptt", "sticker") - não sobrescrever com mediaPayload.mimetype.split("/")[0],
+      // que colapsa "ptt"/"audio" em "audio" e "sticker"/"image" em "image",
+      // fazendo o frontend perder a distinção entre nota de voz e arquivo de
+      // áudio, e entre figurinha e foto.
     }
 
     let lastMessageText = "";

@@ -415,6 +415,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
     setAnchorEl(null);
   };
 
+  const NO_CAPTION_MEDIA_TYPES = ["audio", "ptt", "sticker"];
+
+  const hasCaption = (message) =>
+    !NO_CAPTION_MEDIA_TYPES.includes(message.mediaType);
+
   const checkMessageMedia = (message) => {
     if (message.mediaType === "location" && message.body.split('|').length >= 2) {
       let locationParts = message.body.split('|')
@@ -465,9 +470,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
         )
       } else return (<></>)
     }*/
-    else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
+    else if (
+      message.mediaType === "sticker" ||
+      (message.mediaType === "image" && /\.(jpe?g|png|gif|webp)$/i.test(message.mediaUrl))
+    ) {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
-    } else if (message.mediaType === "audio") {
+    } else if (message.mediaType === "audio" || message.mediaType === "ptt") {
       return <Audio url={message.mediaUrl} />
     } else if (message.mediaType === "video") {
       return (
@@ -619,7 +627,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 ) && checkMessageMedia(message)}
                 <div className={classes.textContentItem}>
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  {hasCaption(message) && (
+                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  )}
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                   </span>
@@ -659,7 +669,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     />
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  {hasCaption(message) && (
+                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  )}
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                     {renderMessageAck(message)}
