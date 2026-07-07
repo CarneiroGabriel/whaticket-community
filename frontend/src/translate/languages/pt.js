@@ -338,6 +338,7 @@ const messages = {
         },
         messageInput: {
           placeholder: "Digite uma mensagem...",
+          audioTooShort: "Gravação muito curta, tente novamente.",
         },
       },
       queues: {

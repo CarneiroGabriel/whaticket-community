@@ -27,6 +27,7 @@ import {
   Switch,
 } from "@material-ui/core";
 import ClickAwayListener from "@material-ui/core/ClickAwayListener";
+import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -368,6 +369,9 @@ const MessageInput = ({ ticketStatus }) => {
       }
       const [, blob] = await recorder.stop().getMp3();
       if (blob.size < 10000) {
+        // Antes descartava a gravação em silêncio - parecia que "enviar áudio
+        // não funciona" quando na verdade era só uma gravação curta demais.
+        toast.warn(i18n.t("messageInput.audioTooShort"));
         setLoading(false);
         setRecording(false);
         return;
